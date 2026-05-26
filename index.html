@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赚了么 - 成本利润报价计算器</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+:root {
+  --primary: #4F46E5;
+  --primary-light: #EEF2FF;
+  --success: #10B981;
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;
+  --bg: #F1F5F9;
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: white;
+  padding: 24px 0;
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.25);
+}
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.header h1 .icon { font-size: 28px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; cursor: pointer; border: none;
+  transition: all 0.2s; white-space: nowrap;
+}
+.btn-outline { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+.btn-outline:hover { background: rgba(255,255,255,0.25); }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #4338CA; transform: translateY(-1px); }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+.btn-danger-sm {
+  background: none; color: #EF4444; border: none; cursor: pointer;
+  padding: 4px 8px; border-radius: 4px; font-size: 18px; line-height: 1;
+}
+.btn-danger-sm:hover { background: #FEF2F2; }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* Main layout */
+.main {
+  max-width: 1400px; margin: 0 auto; padding: 28px 32px;
+  display: grid; grid-template-columns: 1fr 420px; gap: 24px; align-items: start;
+}
+@media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
+
+/* Cards */
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.card-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.card-header h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card-header h2 .badge {
+  background: var(--primary-light); color: var(--primary);
+  font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500;
+}
+.card-body { padding: 20px; }
+
+/* Cost table */
+.cost-table { width: 100%; border-collapse: collapse; }
+.cost-table th {
+  text-align: left; font-size: 12px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; border-bottom: 2px solid var(--border);
+}
+.cost-table td { padding: 10px 12px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; }
+.cost-table tr:last-child td { border-bottom: none; }
+.cost-table input, .cost-table select {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; color: var(--text); background: #F8FAFC; transition: all 0.2s;
+}
+.cost-table input:focus, .cost-table select:focus {
+  outline: none; border-color: var(--primary); background: white;
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+}
+.cost-table input.number { text-align: right; font-variant-numeric: tabular-nums; font-family: "SF Mono", "Consolas", monospace; }
+.cost-table .subtotal {
+  font-weight: 600; color: var(--primary); font-size: 14px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cost-table .action-cell { width: 40px; text-align: center; }
+.cost-table thead th:first-child { width: 30%; }
+.cost-table thead th:nth-child(2) { width: 13%; }
+.cost-table thead th:nth-child(3) { width: 18%; }
+.cost-table thead th:nth-child(4) { width: 13%; }
+.cost-table thead th:nth-child(5) { width: 18%; }
+
+.add-row {
+  padding: 10px 20px; border-top: 1px dashed var(--border);
+  display: flex; gap: 10px; align-items: center;
+}
+.preset-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn {
+  padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px;
+  font-size: 12px; cursor: pointer; background: white; color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.preset-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+
+/* Rates section */
+.rates-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px;
+}
+@media (max-width: 700px) { .rates-grid { grid-template-columns: 1fr; } }
+.rate-item label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 8px;
+}
+.rate-item label .val { font-weight: 700; color: var(--primary); font-size: 15px; }
+.rate-slider {
+  width: 100%; -webkit-appearance: none; height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, var(--primary) 0%, var(--primary) var(--pct), #E2E8F0 var(--pct), #E2E8F0 100%);
+  outline: none;
+}
+.rate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+  background: white; border: 2px solid var(--primary); cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Results panel */
+.result-panel { position: sticky; top: 20px; }
+.summary-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+}
+.summary-card {
+  background: #F8FAFC; border-radius: var(--radius-sm); padding: 14px 16px; text-align: center;
+}
+.summary-card .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.summary-card .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.summary-card .value.primary { color: var(--primary); }
+.summary-card .value.success { color: var(--success); }
+.summary-card .value.warning { color: var(--warning); }
+
+/* Export overlay */
+#exportArea {
+  position: absolute; left: -9999px; top: 0; width: 800px; background: white;
+  padding: 40px; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+#exportArea .export-title {
+  font-size: 24px; font-weight: 700; color: #4F46E5; margin-bottom: 24px;
+  padding-bottom: 16px; border-bottom: 2px solid #4F46E5;
+}
+#exportArea .export-section { margin-bottom: 20px; }
+#exportArea .export-section h3 { font-size: 14px; color: #64748B; margin-bottom: 8px; }
+#exportArea .export-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+#exportArea .export-table th, #exportArea .export-table td {
+  padding: 8px 12px; border: 1px solid #E2E8F0; text-align: left; font-size: 13px;
+}
+#exportArea .export-table th { background: #F8FAFC; font-weight: 600; }
+#exportArea .export-footer {
+  margin-top: 30px; padding-top: 16px; border-top: 1px solid #E2E8F0;
+  font-size: 12px; color: #94A3B8; text-align: center;
+}
+
+/* Empty state */
+.empty-hint { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+
+/* Idea board */
+.board-hint {
+  padding: 12px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: #FFFBEB;
+  border-bottom: 1px solid #FDE68A;
+}
+.idea-board {
+  display: block;
+  width: 100%;
+  min-height: 300px;
+  padding: 20px;
+  border: none;
+  font-size: 15px;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.8;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+  background: repeating-linear-gradient(
+    transparent, transparent 28px, #F1F5F9 28px, #F1F5F9 29px
+  );
+  background-attachment: local;
+}
+.idea-board:focus {
+  background: repeating-linear-gradient(
+    transparent, transparent 28px, #E2E8F0 28px, #E2E8F0 29px
+  );
+  background-attachment: local;
+}
+.idea-board::placeholder {
+  color: #CBD5E1;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+  background: #1E293B; color: white; padding: 12px 24px; border-radius: 8px;
+  font-size: 14px; z-index: 9999; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+@media print {
+  body { background: white; }
+  .header, .btn, .add-row, .preset-btns { display: none !important; }
+  .main { display: block; max-width: 100%; padding: 0; }
+  .result-panel { position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1><span class="icon">💰</span>赚了么</h1>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="resetAll()">🔄 清空重置</button>
+      <button class="btn btn-outline" onclick="window.print()">🖨️ 打印报价</button>
+      <button class="btn btn-success" onclick="exportImage()">📸 导出报价图</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Left: Input -->
+  <div class="input-panel">
+    <!-- Cost Items -->
+    <div class="card" style="margin-bottom: 20px;">
+      <div class="card-header">
+        <h2>📋 成本明细 <span class="badge" id="costCount">0项</span></h2>
+        <div class="preset-btns">
+          <button class="preset-btn" onclick="addPreset('人力成本','人月','20000')">+ 人力</button>
+          <button class="preset-btn" onclick="addPreset('差旅交通','次','800')">+ 差旅</button>
+          <button class="preset-btn" onclick="addPreset('播放量','千次','5')">+ 播放量</button>
+          <button class="preset-btn" onclick="addPreset('互动量','次','0.3')">+ 互动量</button>
+          <button class="preset-btn" onclick="addPreset('AI算力费','次','50')">+ AI算力</button>
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="cost-table">
+          <thead>
+            <tr>
+              <th>成本项目</th>
+              <th>单位</th>
+              <th>单价 (¥)</th>
+              <th>数量</th>
+              <th>小计 (¥)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="costTableBody"></tbody>
+        </table>
+        <div id="emptyHint" class="empty-hint">👆 点击上方按钮添加成本项，或手动添加</div>
+      </div>
+      <div class="add-row">
+        <button class="btn btn-primary btn-sm" onclick="addEmptyRow()">+ 添加成本项</button>
+        <span style="font-size: 12px; color: var(--text-muted);">支持自定义名称、单位和单价</span>
+      </div>
+    </div>
+
+    <!-- Rates -->
+    <div class="card">
+      <div class="card-header"><h2>⚙️ 费率设置</h2></div>
+      <div class="card-body">
+        <div class="rates-grid">
+          <div class="rate-item">
+            <label>利润率 <span class="val" id="profitRateVal">20%</span></label>
+            <input type="range" class="rate-slider" id="profitRate" min="0" max="80" value="20" step="0.5"
+              style="--pct: 25%;" oninput="onRateChange(this, 'profitRateVal')">
+          </div>
+          <div class="rate-item">
+            <label>税率 <span class="val" id="taxRateVal">6%</span></label>
+            <input type="range" class="rate-slider" id="taxRate" min="0" max="17" value="6" step="0.5"
+              style="--pct: 35.29%;" oninput="onRateChange(this, 'taxRateVal')">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 思路整理白板 -->
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-header"><h2>💭 思路整理</h2></div>
+      <div class="card-body" style="padding: 0;">
+        <div class="board-hint">💡 报价思路乱了？先在这里整理一下</div>
+        <textarea id="ideaBoard" class="idea-board" placeholder="在这里自由记录想法、计算草稿、客户需求……随便写，不限制格式"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Results -->
+  <div class="result-panel">
+    <div class="card" id="resultArea">
+      <div class="card-header"><h2>📈 报价结果</h2></div>
+      <div class="card-body" id="resultBody">
+        <div class="summary-cards" id="summaryCards"></div>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary);">
+            <span>总直接成本</span><span id="totalDirectCost">¥0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+            <span>利润</span><span id="totalProfit">¥0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+            <span>税费</span><span id="totalTax">¥0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-top: 10px; padding-top: 10px; border-top: 2px solid var(--border);">
+            <span>含税报价</span><span id="finalQuote" style="color: var(--primary);">¥0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden export area -->
+<div id="exportArea"></div>
+
+<script>
+// State
+let costItems = [];
+let itemIdCounter = 0;
+
+// DOM refs
+const costTableBody = document.getElementById('costTableBody');
+const emptyHint = document.getElementById('emptyHint');
+const costCount = document.getElementById('costCount');
+
+// --- Cost Items ---
+function addEmptyRow() {
+  addCostItem('', '项', '', '1');
+}
+
+function addPreset(name, unit, price) {
+  addCostItem(name, unit, price, '1');
+}
+
+function addCostItem(name, unit, price, qty) {
+  const id = ++itemIdCounter;
+  costItems.push({ id, name, unit, price: parseFloat(price) || 0, qty: parseFloat(qty) || 1 });
+  renderCostTable();
+  recalc();
+}
+
+function removeCostItem(id) {
+  costItems = costItems.filter(item => item.id !== id);
+  renderCostTable();
+  recalc();
+}
+
+function updateCostItem(id, field, value) {
+  const item = costItems.find(i => i.id === id);
+  if (!item) return;
+  if (field === 'price' || field === 'qty') {
+    item[field] = parseFloat(value) || 0;
+  } else {
+    item[field] = value;
+  }
+  recalc();
+}
+
+function calcSubtotal(item) {
+  return (item.price || 0) * (item.qty || 0);
+}
+
+function renderCostTable() {
+  if (costItems.length === 0) {
+    costTableBody.innerHTML = '';
+    emptyHint.style.display = 'block';
+    costCount.textContent = '0项';
+    return;
+  }
+  emptyHint.style.display = 'none';
+  costCount.textContent = costItems.length + '项';
+
+  costTableBody.innerHTML = costItems.map(item => `
+    <tr>
+      <td><input type="text" value="${escapeHtml(item.name)}" placeholder="如：UI设计" onchange="updateCostItem(${item.id},'name',this.value)"></td>
+      <td><input type="text" value="${escapeHtml(item.unit)}" placeholder="人月" onchange="updateCostItem(${item.id},'unit',this.value)" style="text-align:center;"></td>
+      <td><input type="number" class="number" value="${item.price}" min="0" step="0.01" onchange="updateCostItem(${item.id},'price',this.value)"></td>
+      <td><input type="number" class="number" value="${item.qty}" min="0" step="0.01" onchange="updateCostItem(${item.id},'qty',this.value)"></td>
+      <td class="subtotal">¥${calcSubtotal(item).toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+      <td class="action-cell"><button class="btn-danger-sm" onclick="removeCostItem(${item.id})" title="删除">×</button></td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// --- Rates ---
+function onRateChange(slider, labelId) {
+  const val = parseFloat(slider.value);
+  document.getElementById(labelId).textContent = val + '%';
+  slider.style.setProperty('--pct', (val / parseFloat(slider.max) * 100) + '%');
+  recalc();
+}
+
+function getProfitRate() { return parseFloat(document.getElementById('profitRate').value) / 100; }
+function getTaxRate() { return parseFloat(document.getElementById('taxRate').value) / 100; }
+
+// --- Calculation ---
+// 利润率 = 利润 / 税前报价，即 profitRate = profit / (cost + profit)
+// 推导：profit = cost * profitRate / (1 - profitRate)，
+// preTaxTotal = cost / (1 - profitRate)
+function recalc() {
+  const totalDirectCost = costItems.reduce((sum, item) => sum + calcSubtotal(item), 0);
+  const profitRate = getProfitRate();
+  const taxRate = getTaxRate();
+
+  const preTaxTotal = profitRate < 1 ? totalDirectCost / (1 - profitRate) : totalDirectCost;
+  const profit = preTaxTotal - totalDirectCost;
+  const tax = preTaxTotal * taxRate;
+  const finalTotal = preTaxTotal + tax;
+
+  // Update detail lines
+  document.getElementById('totalDirectCost').textContent =
+    '¥' + totalDirectCost.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('totalProfit').textContent =
+    '¥' + profit.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('totalTax').textContent =
+    '¥' + tax.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('finalQuote').textContent =
+    '¥' + finalTotal.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+  // Summary cards
+  const summaryCards = document.getElementById('summaryCards');
+  summaryCards.innerHTML = `
+    <div class="summary-card">
+      <div class="label">直接成本</div>
+      <div class="value primary">¥${totalDirectCost.toLocaleString('zh-CN', {maximumFractionDigits: 0})}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">利润率</div>
+      <div class="value success">${(profitRate * 100).toFixed(1)}%</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">税前报价</div>
+      <div class="value warning">¥${preTaxTotal.toLocaleString('zh-CN', {maximumFractionDigits: 0})}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">含税总价</div>
+      <div class="value primary" style="font-size: 24px;">¥${finalTotal.toLocaleString('zh-CN', {maximumFractionDigits: 0})}</div>
+    </div>
+  `;
+}
+
+// --- Export ---
+async function exportImage() {
+  const exportArea = document.getElementById('exportArea');
+  const totalDirectCost = costItems.reduce((sum, item) => sum + calcSubtotal(item), 0);
+  const profitRate = getProfitRate();
+  const taxRate = getTaxRate();
+  const preTaxTotal = profitRate < 1 ? totalDirectCost / (1 - profitRate) : totalDirectCost;
+  const profit = preTaxTotal - totalDirectCost;
+  const tax = preTaxTotal * taxRate;
+  const finalTotal = preTaxTotal + tax;
+
+  exportArea.innerHTML = `
+    <div class="export-title">📋 赚了么 报价单</div>
+    <div style="color:#64748B;font-size:13px;margin-bottom:16px;">
+      生成时间：${new Date().toLocaleString('zh-CN')}
+    </div>
+
+    <div class="export-section">
+      <h3>成本明细</h3>
+      <table class="export-table">
+        <thead><tr><th>成本项目</th><th>单位</th><th>单价 (¥)</th><th>数量</th><th>小计 (¥)</th></tr></thead>
+        <tbody>
+          ${costItems.map(item => `
+            <tr>
+              <td>${escapeHtml(item.name)}</td>
+              <td>${escapeHtml(item.unit)}</td>
+              <td style="text-align:right;">${item.price.toFixed(2)}</td>
+              <td style="text-align:right;">${item.qty}</td>
+              <td style="text-align:right;">${calcSubtotal(item).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="export-section">
+      <h3>费率</h3>
+      <p style="font-size:13px;">利润率：${(profitRate*100).toFixed(1)}% | 税率：${(taxRate*100).toFixed(1)}%</p>
+    </div>
+
+    <div class="export-section">
+      <h3>报价汇总</h3>
+      <table class="export-table">
+        <tbody>
+          <tr><td style="width:50%;">总直接成本</td><td style="text-align:right;">¥${totalDirectCost.toFixed(2)}</td></tr>
+          <tr><td>利润 (${(profitRate*100).toFixed(1)}%)</td><td style="text-align:right;">¥${profit.toFixed(2)}</td></tr>
+          <tr><td>税前报价</td><td style="text-align:right;">¥${preTaxTotal.toFixed(2)}</td></tr>
+          <tr><td>税费 (${(taxRate*100).toFixed(1)}%)</td><td style="text-align:right;">¥${tax.toFixed(2)}</td></tr>
+          <tr style="font-weight:700;font-size:16px;color:#4F46E5;"><td>含税总价</td><td style="text-align:right;">¥${finalTotal.toFixed(2)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="export-footer">本报价单由「赚了么」自动生成</div>
+  `;
+
+  await new Promise(r => setTimeout(r, 200));
+
+  try {
+    const canvas = await html2canvas(exportArea, {
+      backgroundColor: '#ffffff', scale: 2, useCORS: true, logging: false
+    });
+    const link = document.createElement('a');
+    link.download = '赚了么报价_' + new Date().toISOString().slice(0,10) + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ 报价图已导出');
+  } catch(e) {
+    showToast('❌ 导出失败，请重试');
+    console.error(e);
+  }
+}
+
+// --- Reset ---
+function resetAll() {
+  if (costItems.length > 0) {
+    if (!confirm('确定要清空所有数据吗？此操作不可恢复。')) return;
+  }
+  costItems = [];
+  itemIdCounter = 0;
+  document.getElementById('profitRate').value = 20;
+  document.getElementById('taxRate').value = 6;
+  document.getElementById('profitRateVal').textContent = '20%';
+  document.getElementById('taxRateVal').textContent = '6%';
+  document.querySelectorAll('.rate-slider').forEach(s => {
+    s.style.setProperty('--pct', (parseFloat(s.value) / parseFloat(s.max) * 100) + '%');
+  });
+  document.getElementById('ideaBoard').value = '';
+  localStorage.removeItem('zlm_ideas');
+  renderCostTable();
+  recalc();
+}
+
+// --- Toast ---
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// --- Init ---
+function init() {
+  addCostItem('人力成本', '人月', 20000, 3);
+  addCostItem('差旅交通', '次', 800, 4);
+  addCostItem('播放量投放', '千次', 5, 100);
+  addCostItem('互动量投放', '次', 0.3, 5000);
+  addCostItem('AI算力费', '次', 50, 20);
+  recalc();
+
+  // 思路整理白板 - localStorage 持久化
+  const board = document.getElementById('ideaBoard');
+  const saved = localStorage.getItem('zlm_ideas');
+  if (saved) board.value = saved;
+  board.addEventListener('input', function() {
+    localStorage.setItem('zlm_ideas', this.value);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
